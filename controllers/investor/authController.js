@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { promisify } = require('util');
+const crypto = require('crypto');
 const Investor = require('../../models/investorModel');
 const catchAsync = require('../../utils/catchAsync');
 const AppError = require('../../utils/appError');
@@ -170,9 +171,41 @@ const protect = catchAsync(async (req, res, next) => {
   next();
 });
 
+// reset password
+const resetPassword = catchAsync(async (req, res, next) => {
+  // 1 Get user based on the token
+  const hashedToken = crypto
+    .createHash('sha256')
+    .update(req.params.token)
+    .digest('hex');
+
+  const investor = await Investor.findOne({
+    passwordResetToken: hashedToken,
+    passwordResetExpires: { $gt: Date.now() },
+  });
+
+  // 2 if the token has not expired and there is a user, set the password
+  if (!investor) {
+    return next(new AppError('Token is invalid or has expired', 400));
+  }
+
+  investor.password = req.body.password;
+  investor.passwordConfirm = req.body.passwordConfirm;
+  investor.passwordResetToken = undefined;
+  investor.passwordResetExpires = undefined;
+  await investor.save();
+
+  // 3 update changePasswordAt property for the Investor
+  // This is updated on every save
+
+  // 4 login the Investor in, send JWT
+  createSendToken(investor, 200, res);
+});
+
 module.exports = {
   createInvestor,
   signInInvestor,
   protect,
   forgotPassword,
+  resetPassword,
 };
