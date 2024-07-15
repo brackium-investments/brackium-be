@@ -34,27 +34,6 @@ const updateOne = (Model) =>
     });
   });
 
-const activateOne = (Model) =>
-  catchAsync(async (req, res, next) => {
-    const doc = await Model.findByIdAndUpdate(
-      req.body.id,
-      { isLoginActivated: true },
-      {
-        new: true,
-        runValidators: true,
-      },
-    );
-    if (!doc) {
-      return next(new AppError('No user found with that ID', 404));
-    }
-    res.status(200).json({
-      status: 'success',
-      data: {
-        data: doc,
-      },
-    });
-  });
-
 const createOne = (Model) =>
   catchAsync(async (req, res, next) => {
     const doc = await Model.create(req.body);
@@ -204,7 +183,6 @@ module.exports = {
   createOne,
   getOne,
   getAllDocs,
-  activateOne,
   restrictTo,
   // protectAll,
 };

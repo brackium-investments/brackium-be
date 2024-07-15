@@ -9,6 +9,7 @@ const xss = require('xss-clean');
 const hpp = require('hpp');
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controllers/errorController');
+const investorRouter = require('./routes/investorRoutes');
 
 const app = express();
 
@@ -68,8 +69,12 @@ app.use((req, res, next) => {
   next();
 });
 
+app.use('/api/v1/investors', investorRouter);
+
 app.use('*', (req, res, next) => {
   next(new AppError(`Can't find ${req.originalUrl} at the moment`, 404));
 });
 
 app.use(globalErrorHandler);
+
+module.exports = app;
