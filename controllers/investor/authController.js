@@ -77,7 +77,53 @@ const signInInvestor = catchAsync(async (req, res, next) => {
 });
 
 // forgot password
-// reset password
+const forgotPassword = catchAsync(async (req, res, next) => {
+  // 1 get user based on posted email
+  const investor = await Investor.findOne({ email: req.body.email });
+
+  if (!investor) {
+    return next(new AppError(`There is no user with the email`, 404));
+  }
+
+  // 2 generate the random token
+  const resetToken = investor.createPasswordResetToken();
+  await investor.save({ validateBeforeSave: false });
+
+  const hostLink =
+    process.env.NODE_ENV === 'development'
+      ? 'http://localhost:3000/auth/reset-password'
+      : process.env.INVESTOR_PROD_RESET_PASSWORD_PATH;
+
+  const resetURL = `${hostLink}/${resetToken}`;
+
+  // const message = `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}. \nIf you didn't forget your password, please ignore this email.`;
+
+  try {
+    // await new Email(
+    //   investor,
+    //   resetURL,
+    //   process.env.EMAIL_SUPPORT,
+    // ).sendPasswordReset();
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Token sent to email',
+      url: resetURL,
+    });
+  } catch (err) {
+    investor.passwordResetToken = undefined;
+    investor.passwordResetExpires = undefined;
+    await investor.save({ validateBeforeSave: false });
+
+    return next(
+      new AppError(
+        'There was an error sending the email. Please try again',
+        500,
+      ),
+    );
+  }
+});
+
 // protect
 // middleware to protect tours route
 const protect = catchAsync(async (req, res, next) => {
@@ -127,4 +173,6 @@ const protect = catchAsync(async (req, res, next) => {
 module.exports = {
   createInvestor,
   signInInvestor,
+  protect,
+  forgotPassword,
 };
