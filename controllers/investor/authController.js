@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Investor = require('../../models/investorModel');
 const catchAsync = require('../../utils/catchAsync');
+const AppError = require('../../utils/appError');
 
 // sign in user using jwt
 const signToken = (id) =>
@@ -46,10 +47,39 @@ const createInvestor = catchAsync(async (req, res, next) => {
 });
 
 // login to acc
+const signInInvestor = catchAsync(async (req, res, next) => {
+  //   check if email and password already exist
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return next(new AppError('Please provide email or password', 400));
+  }
+
+  // check if the user exists and password is correct
+
+  const investor = await Investor.findOne({ email }).select('+password');
+  // .populate({
+  //   path: 'investments',
+  //   select: '-investor',
+  // });
+
+  if (
+    !investor ||
+    !(await investor.correctPassword(password, investor.password))
+  ) {
+    return next(new AppError('Incorrect email or password', 401));
+  }
+
+  // if everything is ok, send the token to the client
+
+  createSendToken(investor, 200, res);
+});
+
 // forgot password
 // reset password
 // protect
 
 module.exports = {
   createInvestor,
+  signInInvestor,
 };
