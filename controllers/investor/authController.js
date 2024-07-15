@@ -202,10 +202,39 @@ const resetPassword = catchAsync(async (req, res, next) => {
   createSendToken(investor, 200, res);
 });
 
+// update password
+const updatePassword = catchAsync(async (req, res, next) => {
+  const { passwordCurrent, newPassword, confirmNewPassword } = req.body;
+
+  // 1 get the user from the collection
+  const investor = await Investor.findById(req.investor.id).select('+password');
+
+  // 2 check if the posted password is correct
+  if (
+    !investor &&
+    !(await investor.correctPassword(passwordCurrent, investor.password))
+  ) {
+    return next(new AppError('Your current password is wrong', 401));
+  }
+
+  // 3 if the password is correct, update the password
+  investor.password = newPassword;
+  investor.passwordConfirm = confirmNewPassword;
+  await investor.save();
+
+  // 4 login Investor and send JWt
+  //   createSendToken(investor, 200, res);
+  res.status(200).json({
+    status: 'success',
+    message: 'Password updated successfully',
+  });
+});
+
 module.exports = {
   createInvestor,
   signInInvestor,
   protect,
   forgotPassword,
   resetPassword,
+  updatePassword,
 };
